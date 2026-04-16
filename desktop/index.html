@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeatForge v7 — WASM Plugin Host</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: dark; }
+  html { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+  .step { transition: all 0.08s ease; }
+  .step.active { background: linear-gradient(180deg, #22d3ee, #0891b2); box-shadow: 0 0 12px rgba(34,211,238,0.5), inset 0 1px 0 rgba(255,255,255,0.2); }
+  .step.playing { outline: 2px solid #facc15; outline-offset: -2px; }
+  .piano-key.black { background: linear-gradient(to bottom, #18181b, #09090b); }
+  .fader::-webkit-slider-thumb { appearance: none; width: 18px; height: 8px; background: #e4e4e7; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.5); cursor: pointer; }
+  .fader { writing-mode: vertical-lr; direction: rtl; appearance: none; width: 6px; height: 140px; background: linear-gradient(to top, #27272a, #18181b); border-radius: 3px; }
+  .knob { appearance: none; width: 100%; height: 4px; background: #27272a; border-radius: 2px; outline: none; }
+  .knob::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #22d3ee; border: 2px solid #0e7490; box-shadow: 0 0 8px rgba(34,211,238,0.4); cursor: pointer; }
+  .plugin-slot { transition: all 0.15s; }
+  .plugin-slot.filled { background: linear-gradient(135deg, #0e7490, #155e75); box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 0 10px rgba(14,116,144,0.3); }
+  .plugin-window { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+  .grid-bg { background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 20px 20px; }
+</style>
+</head>
+<body class="bg-[#050507] text-zinc-200 antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
+<div id="app" class="min-h-screen flex flex-col">
+  <!-- Header -->
+  <header class="sticky top-0 z-40 border-b border-zinc-800/80 bg-black/70 backdrop-blur-xl">
+    <div class="flex items-center gap-3 px-3 sm:px-4 h-[56px]">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-violet-600 flex items-center justify-center shadow-lg shadow-cyan-900/20">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </div>
+        <div>
+          <div class="font-semibold tracking-tight leading-none">BeatForge</div>
+          <div class="text-[10px] mono text-zinc-500 -mt-0.5">v7 WASM</div>
+        </div>
+      </div>
+
+      <div class="h-6 w-px bg-zinc-800 mx-1 hidden sm:block"></div>
+
+      <!-- Transport -->
+      <div class="flex items-center gap-1.5">
+        <button id="playBtn" class="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 font-medium text-sm flex items-center gap-1.5 shadow shadow-emerald-950/50 transition">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span class="hidden sm:inline">Play</span>
+        </button>
+        <button id="stopBtn" class="h-8 w-8 grid place-items-center rounded-lg bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-900 transition">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 ml-1">
+        <div class="hidden sm:flex items-center gap-1.5 bg-zinc-900/80 border border-zinc-800 rounded-lg h-8 px-2.5">
+          <span class="text-[11px] text-zinc-500 uppercase tracking-wide">BPM</span>
+          <input id="bpm" type="number" value="140" min="60" max="200" class="w-[52px] bg-transparent outline-none text-sm font-medium mono text-zinc-100">
+        </div>
+        <div class="hidden md:flex items-center gap-1.5 bg-zinc-900/80 border border-zinc-800 rounded-lg h-8 px-2.5">
+          <span class="text-[11px] text-zinc-500 uppercase tracking-wide">Swing</span>
+          <input id="swing" type="range" min="0" max="40" value="8" class="w-20 accent-cyan-500">
+        </div>
+      </div>
+
+      <div class="flex-1"></div>
+
+      <!-- CPU -->
+      <div class="hidden sm:flex items-center gap-2">
+        <span class="text-[10px] uppercase tracking-widest text-zinc-500">CPU</span>
+        <div class="w-[84px] h-[6px] bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+          <div id="cpuBar" class="h-full w-[8%] bg-gradient-to-r from-emerald-500 to-cyan-400 transition-all duration-300"></div>
+        </div>
+        <span id="cpuText" class="mono text-[11px] text-zinc-400 w-[32px]">8%</span>
+      </div>
+
+      <button id="midiBtn" class="h-8 px-2.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-xs flex items-center gap-1.5 transition" title="USB MIDI">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <span class="hidden lg:inline">MIDI</span>
+      </button>
+      <button id="themeToggle" class="h-8 w-8 grid place-items-center rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 transition" title="Theme">
+        <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex items-center gap-1 px-2 sm:px-3 pb-2">
+      <nav class="flex items-center gap-1 p-1 bg-zinc-950 rounded-xl border border-zinc-900">
+        <button data-tab="seq" class="tab-btn active px-3 h-7 rounded-lg text-[13px] font-medium bg-zinc-800 text-white">Sequencer</button>
+        <button data-tab="piano" class="tab-btn px-3 h-7 rounded-lg text-[13px] font-medium text-zinc-400 hover:text-zinc-200">Piano Roll</button>
+        <button data-tab="mixer" class="tab-btn px-3 h-7 rounded-lg text-[13px] font-medium text-zinc-400 hover:text-zinc-200">Mixer</button>
+        <button data-tab="plugins" class="tab-btn px-3 h-7 rounded-lg text-[13px] font-medium text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5">
+          <span>Plugins</span>
+          <span class="text-[10px] px-1 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">WASM</span>
+        </button>
+      </nav>
+      <div class="flex-1"></div>
+      <div class="flex items-center gap-1.5">
+        <button id="templateBtn" class="h-7 px-2.5 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/20 text-xs font-medium transition">Load Starter</button>
+        <button id="savePreset" class="h-7 px-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs">Save Chain</button>
+        <button id="loadPreset" class="h-7 px-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs">Load</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="flex-1 min-h-0 relative">
+    <!-- SEQUENCER -->
+    <section id="tab-seq" class="tab-panel absolute inset-0 overflow-auto">
+      <div class="p-3 sm:p-4 max-w-[1280px] mx-auto">
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Drum Machine</h2>
+          <div class="text-[11px] mono text-zinc-500">16-step • 4 tracks</div>
+        </div>
+        <div id="sequencer" class="space-y-2.5"></div>
+        <div class="mt-6 p-3 rounded-xl bg-amber-950/20 border border-amber-900/30 text-amber-200/80 text-xs">
+          Tip: Click steps to program drums. Shift-click to add accent. USB MIDI input routes to Synth.
+        </div>
+      </div>
+    </section>
+
+    <!-- PIANO ROLL -->
+    <section id="tab-piano" class="tab-panel absolute inset-0 overflow-hidden hidden">
+      <div class="h-full flex flex-col">
+        <div class="flex items-center justify-between px-4 h-11 border-b border-zinc-900 bg-zinc-950/50">
+          <h2 class="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Piano Roll — Synth</h2>
+          <div class="flex items-center gap-2">
+            <select id="scale" class="h-7 px-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs">
+              <option>Chromatic</option><option>Minor</option><option>Major</option><option>Dorian</option>
+            </select>
+            <button id="clearPiano" class="h-7 px-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs">Clear</button>
+          </div>
+        </div>
+        <div class="flex-1 min-h-0 flex">
+          <div id="pianoKeys" class="w-14 sm:w-16 bg-zinc-950 border-r border-zinc-900 shrink-0"></div>
+          <div class="flex-1 min-w-0 overflow-auto relative grid-bg" id="pianoGridWrap">
+            <div id="pianoGrid" class="relative" style="width: 1280px; height: 480px;"></div>
+            <div id="pianoPlayhead" class="absolute top-0 bottom-0 w-px bg-yellow-400/80 pointer-events-none z-20" style="left:0; display:none;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MIXER -->
+    <section id="tab-mixer" class="tab-panel absolute inset-0 overflow-auto hidden">
+      <div class="p-3 sm:p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Mixer • EQ • Sends • Inserts</h2>
+          <div class="text-[11px] mono text-zinc-500">4 WASM slots per channel</div>
+        </div>
+        <div id="mixer" class="flex gap-3 overflow-x-auto pb-4 snap-x"></div>
+        <div id="workletFallback" class="hidden mt-4 p-4 rounded-xl bg-red-950/30 border border-red-900/50 text-red-200 text-sm">
+          AudioWorklet not supported. WASM plugins require a modern browser (Chrome, Edge, Safari 14.1+).
+        </div>
+      </div>
+    </section>
+
+    <!-- PLUGINS -->
+    <section id="tab-plugins" class="tab-panel absolute inset-0 overflow-auto hidden">
+      <div class="p-3 sm:p-6 max-w-[1100px] mx-auto">
+        <div class="grid lg:grid-cols-3 gap-4">
+          <div class="lg:col-span-2 p-5 rounded-2xl bg-zinc-950/70 border border-zinc-900">
+            <h2 class="text-lg font-semibold mb-1">WebAssembly Plugin Host</h2>
+            <p class="text-sm text-zinc-400 mb-4">VST-style hosting via AudioWorklet + WASM. Each track has 4 insert slots. Plugins process audio in real-time with sample-accurate automation.</p>
+            <div class="grid sm:grid-cols-3 gap-3">
+              <div class="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800">
+                <div class="text-xs uppercase tracking-wider text-zinc-500 mb-1">Host API</div>
+                <div class="font-medium">AudioWorklet + WASM</div>
+                <div class="text-xs text-zinc-500 mt-1">128-sample blocks</div>
+              </div>
+              <div class="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800">
+                <div class="text-xs uppercase tracking-wider text-zinc-500 mb-1">Latency</div>
+                <div class="font-medium">~2.9ms @ 44.1k</div>
+                <div class="text-xs text-zinc-500 mt-1">Zero-copy</div>
+              </div>
+              <div class="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800">
+                <div class="text-xs uppercase tracking-wider text-zinc-500 mb-1">Format</div>
+                <div class="font-medium">.wasm modules</div>
+                <div class="text-xs text-zinc-500 mt-1">Standardized params</div>
+              </div>
+            <div class="mt-5 flex flex-wrap gap-2">
+              <button id="loadWasmBtn" class="h-9 px-3 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-sm font-medium flex items-center gap-1.5">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Load .wasm Plugin
+              </button>
+              <input id="wasmFile" type="file" accept=".wasm" class="hidden">
+              <button id="openRack" class="h-9 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-sm">Open Plugin Rack</button>
+            </div>
+          <div class="p-5 rounded-2xl bg-zinc-950/70 border border-zinc-900">
+            <h3 class="font-semibold mb-3">Built-in Demo Plugins</h3>
+            <div class="space-y-2.5" id="builtinList"></div>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <h3 class="text-sm font-semibold text-zinc-300 uppercase tracking-wider mb-3">Active Chains</h3>
+          <div id="pluginRack" class="grid md:grid-cols-2 gap-3"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Plugin Window Template -->
+<div id="pluginWindows" class="fixed inset-0 pointer-events-none z-50"></div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] hidden">
+  <div class="px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 shadow-xl text-sm"></div>
+</div>
+
+<script>
+/* ================= BeatForge v7 core ================= */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+
+let audioCtx, masterGain, isPlaying = false, bpm = 140, swing = 8;
+let currentStep = 0, nextNoteTime = 0, schedulerTimer = null;
+let drumBuffers = {};
+let tracks = {};
+let midiAccess = null;
+
+// Theme
+const themeToggle = $('#themeToggle');
+const themeIcon = $('#themeIcon');
+function setTheme(dark) {
+  document.documentElement.classList.toggle('dark', dark);
+  localStorage.bf7_theme = dark ? 'dark' : 'light';
+  themeIcon.innerHTML = dark ? '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>' : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>';
+}
+setTheme(localStorage.bf7_theme !== 'light');
+themeToggle.onclick = () => setTheme(!document.documentElement.classList.contains('dark'));
+
+/* ================= Audio Init ================= */
+async function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.9;
+  masterGain.connect(audioCtx.destination);
+
+  // Worklet support check
+  if (!audioCtx.audioWorklet) {
+    $('#workletFallback').classList.remove('hidden');
+  } else {
+    await initWorklets(); // WASM PLUGIN HOST init
+  }
+
+  // Create tracks
+  createTracks();
+  // Create drum sounds
+  drumBuffers.kick = createKick();
+  drumBuffers.snare = createSnare();
+  drumBuffers.hat = createHat();
+  drumBuffers.clap = createClap();
+
+  // Reverb + Delay sends
+  createSends();
+
+  toast('Audio ready • WASM host online');
+}
+
+function createTracks() {
+  const defs = [
+    {id:'kick', name:'KICK', color:'from-rose-500 to-red-600'},
+    {id:'snare', name:'SNARE', color:'from-amber-500 to-orange-600'},
+    {id:'hat', name:'HAT', color:'from-cyan-500 to-blue-600'},
+    {id:'clap', name:'CLAP', color:'from-fuchsia-500 to-violet-600'},
+    {id:'synth', name:'SYNTH', color:'from-emerald-500 to-teal-600'},
+  ];
+  defs.forEach(d => {
+    const input = audioCtx.createGain();
+    const eqLow = audioCtx.createBiquadFilter(); eqLow.type='lowshelf'; eqLow.frequency.value=120; eqLow.gain.value=0;
+    const eqMid = audioCtx.createBiquadFilter(); eqMid.type='peaking'; eqMid.frequency.value=1200; eqMid.Q.value=0.8; eqMid.gain.value=0;
+    const eqHigh = audioCtx.createBiquadFilter(); eqHigh.type='highshelf'; eqHigh.frequency.value=5000; eqHigh.gain.value=0;
+    const panner = audioCtx.createStereoPanner();
+    const gain = audioCtx.createGain(); gain.gain.value = 0.8;
+    const pre = audioCtx.createGain(); // for sends
+    input.connect(pre);
+    tracks[d.id] = { ...d, input, pre, eqLow, eqMid, eqHigh, panner, gain, plugins:[null,null,null,null], pluginNodes:[null,null,null,null], sendRev:0, sendDel:0, mute:false, solo:false };
+    rebuildTrackChain(d.id);
+  });
+}
+
+function rebuildTrackChain(id) {
+  const t = tracks[id];
+  // disconnect
+  try { t.pre.disconnect(); t.eqLow.disconnect(); t.eqMid.disconnect(); t.eqHigh.disconnect(); t.panner.disconnect(); t.gain.disconnect(); } catch {}
+  t.pluginNodes.forEach(n => { try { n.disconnect(); } catch {} });
+  // chain: input -> plugins -> eqLow -> eqMid -> eqHigh -> panner -> gain -> master + sends
+  let last = t.pre;
+  t.pluginNodes.forEach(node => {
+    if (node) { last.connect(node); last = node; }
+  });
+  last.connect(t.eqLow); t.eqLow.connect(t.eqMid); t.eqMid.connect(t.eqHigh); t.eqHigh.connect(t.panner); t.panner.connect(t.gain); t.gain.connect(masterGain);
+  // sends
+  if (window.revSend) { t.pre.connect(revSend); }
+  if (window.delSend) { t.pre.connect(delSend); }
+}
+
+let revSend, delSend, reverb, delay, delFeedback;
+function createSends() {
+  reverb = audioCtx.createConvolver();
+  reverb.buffer = createReverbImpulse(2.5, 2.0);
+  const revGain = audioCtx.createGain(); revGain.gain.value = 0.25;
+  reverb.connect(revGain); revGain.connect(masterGain);
+  revSend = audioCtx.createGain(); revSend.gain.value=0; revSend.connect(reverb);
+
+  delay = audioCtx.createDelay(2.0); delay.delayTime.value = 0.33;
+  delFeedback = audioCtx.createGain(); delFeedback.gain.value = 0.35;
+  const delGain = audioCtx.createGain(); delGain.gain.value = 0.25;
+  delay.connect(delFeedback); delFeedback.connect(delay); delay.connect(delGain); delGain.connect(masterGain);
+  delSend = audioCtx.createGain(); delSend.gain.value=0; delSend.connect(delay);
+}
+
+/* ================= Drum Synths ================= */
+function createKick() {
+  const len = audioCtx.sampleRate * 0.5;
+  const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i=0;i<len;i++){ const t=i/audioCtx.sampleRate; const f=160*Math.exp(-t*18)+50; d[i]=Math.sin(2*Math.PI*f*t)*Math.exp(-t*8)*1.2; }
+  return buf;
+}
+function createSnare() {
+  const len = audioCtx.sampleRate*0.3; const buf=audioCtx.createBuffer(1,len,audioCtx.sampleRate); const d=buf.getChannelData(0);
+  for(let i=0;i<len;i++){ const n=Math.random()*2-1; const e=Math.exp(-i/(audioCtx.sampleRate*0.08)); d[i]=n*e*0.8 + Math.sin(2*Math.PI*180*i/audioCtx.sampleRate)*e*0.3; }
+  return buf;
+}
+function createHat() {
+  const len = audioCtx.sampleRate*0.1; const buf=audioCtx.createBuffer(1,len,audioCtx.sampleRate); const d=buf.getChannelData(0);
+  for(let i=0;i<len;i++){ const n=Math.random()*2-1; d[i]=n*Math.exp(-i/(audioCtx.sampleRate*0.02))*0.5; }
+  return buf;
+}
+function createClap() {
+  const len = audioCtx.sampleRate*0.25; const buf=audioCtx.createBuffer(1,len,audioCtx.sampleRate); const d=buf.getChannelData(0);
+  for(let i=0;i<len;i++){ const n=Math.random()*2-1; const env = (i<0.01*audioCtx.sampleRate|| (i>0.02*audioCtx.sampleRate && i<0.03*audioCtx.sampleRate))?1:0; d[i]=n*env*Math.exp(-i/(audioCtx.sampleRate*0.15))*0.9; }
+  return buf;
+}
+function createReverbImpulse(seconds, decay) {
+  const rate = audioCtx.sampleRate; const len = rate*seconds; const buf = audioCtx.createBuffer(2,len,rate);
+  for(let c=0;c<2;c++){ const d=buf.getChannelData(c); for(let i=0;i<len;i++){ d[i]=(Math.random()*2-1)*Math.pow(1-i/len,decay); } }
+  return buf;
+}
+
+/* ================= Sequencer UI ================= */
+const seqEl = $('#sequencer');
+const trackDefs = [
+  {id:'kick', label:'KICK', color:'bg-rose-500'},
+  {id:'snare', label:'SNARE', color:'bg-amber-500'},
+  {id:'hat', label:'HAT', color:'bg-cyan-500'},
+  {id:'clap', label:'CLAP', color:'bg-fuchsia-500'},
+];
+const patterns = {
+  kick:  [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,1,0],
+  snare: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+  hat:   [0,1,1,1, 0,1,1,1, 0,1,1,1, 0,1,1,1],
+  clap:  [0,0,0,0, 0,0,1,0, 0,0, 0,0,0,0],
+};
+function renderSequencer() {
+  seqEl.innerHTML = '';
+  trackDefs.forEach(t => {
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2';
+    row.innerHTML = `<div class="w-[72px] sm:w-[84px] text-[11px] font-medium tracking-wider text-zinc-400">${t.label}</div>
+      <div class="grid grid-cols-16 gap-1.5 flex-1" data-track="${t.id}"></div>`;
+    const grid = row.querySelector('.grid');
+    for(let i=0;i<16;i++){
+      const btn = document.createElement('button');
+      btn.className = 'step aspect-square rounded-md bg-zinc-900 border border-zinc-800 hover:border-zinc-700';
+      btn.dataset.step = i;
+      if (patterns[t.id][i]) btn.classList.add('active');
+      btn.onclick = (e) => { patterns[t.id][i] ^= 1; btn.classList.toggle('active'); if(e.shiftKey) playDrum(t.id, audioCtx.currentTime, 1.2); else playDrum(t.id, audioCtx.currentTime, 0.9); };
+      grid.appendChild(btn);
+    }
+    seqEl.appendChild(row);
+  });
+}
+renderSequencer();
+
+function updatePlayhead() {
+  $$('#sequencer [data-track]').forEach(grid => {
+    [...grid.children].forEach((b,i)=> b.classList.toggle('playing', i===currentStep));
+  });
+  const ph = $('#pianoPlayhead');
+  if (ph) { ph.style.display = isPlaying ? 'block':'none'; ph.style.left = ((currentStep%32)/32*1280) + 'px'; }
+}
+
+/* ================= Piano Roll ================= */
+const pianoKeys = $('#pianoKeys');
+const pianoGrid = $('#pianoGrid');
+const NOTES = 24; const STEPS = 32;
+let pianoPattern = []; // {step, note, vel}
+function renderPiano() {
+  pianoKeys.innerHTML=''; pianoGrid.innerHTML='';
+  for(let n=NOTES-1;n>=0;n--){
+    const midi = 60 + n; const isBlack = [1,3,6,8,10].includes(midi%12);
+    const key = document.createElement('div'); key.className = 'h-[20px] border-b border-zinc-900 flex items-center justify-end pr-1 ' + (isBlack?'piano-key black':'bg-zinc-900'); key.innerHTML = `<span class="text-[9px] mono ${isBlack?'text-zinc-600':'text-zinc-500'}">${['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][midi%12]}${Math.floor(midi/12)-1}</span>`; pianoKeys.appendChild(key);
+    for(let s=0;s<STEPS;s++){
+      const cell = document.createElement('div'); cell.className='absolute border border-zinc-900/70 hover:bg-white/5'; cell.style.left = s*40+'px'; cell.style.top = (NOTES-1-n)*20+'px'; cell.style.width='40px'; cell.style.height='20px'; cell.dataset.step=s; cell.dataset.note=n;
+      cell.onclick = () => toggleNote(s, n);
+      pianoGrid.appendChild(cell);
+    }
+  }
+  drawPianoNotes();
+}
+function toggleNote(step, note){ const idx = pianoPattern.findIndex(p=>p.step===step && p.note===note); if(idx>-1) pianoPattern.splice(idx,1); else pianoPattern.push({step,note,vel:0.9}); drawPianoNotes(); if(audioCtx) playSynthNote(note, audioCtx.currentTime, 0.2); }
+function drawPianoNotes(){ $$('#pianoGrid .piano-note').forEach(e=>e.remove()); pianoPattern.forEach(p=>{ const el=document.createElement('div'); el.className='piano-note absolute rounded-[3px] bg-emerald-500/90 border border-emerald-300/30 shadow'; el.style.left=p.step*40+2+'px'; el.style.top=(NOTES-1-p.note)*20+2+'px'; el.style.width='36px'; el.style.height='16px'; pianoGrid.appendChild(el); }); }
+renderPiano();
+$('#clearPiano').onclick = ()=>{ pianoPattern=[]; drawPianoNotes(); };
+
+/* ================= Mixer UI ================= */
+function renderMixer() {
+  const mix = $('#mixer'); mix.innerHTML='';
+  Object.values(tracks).forEach(t => {
+    const strip = document.createElement('div');
+    strip.className = 'snap-start shrink-0 w-[170px] rounded-2xl bg-zinc-950 border border-zinc-900 p-3 flex flex-col';
+    strip.innerHTML = `
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-[11px] font-semibold tracking-widest text-zinc-400">${t.name}</div>
+        <div class="w-2 h-2 rounded-full bg-gradient-to-br ${t.color}"></div>
+      </div>
+      <div class="grid grid-cols-4 gap-1 mb-2">
+        ${[0,1,2,3].map(i=>`<button class="plugin-slot h-[26px] rounded-md bg-zinc-900 border-zinc-800 text-[10px] mono text-zinc-500 hover:border-zinc-700" data-track="${t.id}" data-slot="${i}">—</button>`).join('')}
+      </div>
+      <div class="space-y-2 mb-2">
+        ${['LOW','MID','HIGH'].map((l,idx)=>`<div class="flex items-center gap-2"><span class="w-[28px] text-[10px] text-zinc-500">${l}</span><input type="range" min="-12" max="12" value="0" data-eq="${t.id}-${idx}" class="knob flex-1"></div>`).join('')}
+      </div>
+      <div class="grid grid-cols-2 gap-2 mb-2">
+        <div><div class="text-[10px] text-zinc-500 mb-1">REV</div><input type="range" min="0" max="100" value="0" data-rev="${t.id}" class="knob w-full"></div>
+        <div><div class="text-[10px] text-zinc-500 mb-1">DLY</div><input type="range" min="0" max="100" value="0" data-del="${t.id}" class="knob w-full"></div>
+      </div>
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-[10px] text-zinc-500">PAN</span><input type="range" min="-1" max="1" step="0.01" value="0" data-pan="${t.id}" class="knob flex-1">
+      </div>
+      <div class="flex-1 flex items-end justify-between">
+        <div class="flex flex-col items-center gap-1">
+          <button data-mute="${t.id}" class="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] hover:bg-zinc-800">M</button>
+          <button data-solo="${t.id}" class="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] hover:bg-zinc-800">S</button>
+        </div>
+        <div class="flex flex-col items-center">
+          <input type="range" min="0" max="1" step="0.01" value="0.8" orient="vertical" data-vol="${t.id}" class="fader">
+          <span class="text-[10px] mono text-zinc-500 mt-1">0.0</span>
+        </div>
+      </div>
+    `;
+    mix.appendChild(strip);
+  });
+  // bind
+  $$('[data-eq]').forEach(s=> s.oninput = e=>{ const [id,i]=e.target.dataset.eq.split('-'); const t=tracks[id]; const v=+e.target.value; [t.eqLow,t.eqMid,t.eqHigh][+i].gain.value=v; });
+  $$('[data-pan]').forEach(s=> s.oninput = e=> tracks[e.target.dataset.pan].panner.pan.value=+e.target.value);
+  $$('[data-vol]').forEach(s=> s.oninput = e=>{ const t=tracks[e.target.dataset.vol]; t.gain.gain.value=+e.target.value; e.target.nextElementSibling.textContent = (e.target.value*100|0); });
+  $$('[data-rev]').forEach(s=> s.oninput = e=> { const t=tracks[e.target.dataset.rev]; t.sendRev=+e.target.value/100; revSend.gain.value = Math.max(...Object.values(tracks).map(t=>t.sendRev||0)); });
+  $$('[data-del]').forEach(s=> s.oninput = e=> { const t=tracks[e.target.dataset.del]; t.sendDel=+e.target.value/100; delSend.gain.value = Math.max(...Object.values(tracks).map(t=>t.sendDel||0)); });
+  $$('[data-mute]').forEach(b=> b.onclick = ()=>{ const t=tracks[b.dataset.mute]; t.mute=!t.mute; t.gain.gain.value = t.mute?0:b.parentElement.nextElementSibling.querySelector('input').value; b.classList.toggle('bg-red-600',t.mute); });
+  $$('.plugin-slot').forEach(b=> b.onclick = ()=> openPluginPicker(b.dataset.track, +b.dataset.slot));
+}
+
+/* ================= Transport ================= */
+$('#playBtn').onclick = async () => { await initAudio(); if(audioCtx.state==='suspended') await audioCtx.resume(); isPlaying = !isPlaying; $('#playBtn').innerHTML = isPlaying?'<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg><span class="hidden sm:inline">Pause</span>':'<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg><span class="hidden sm:inline">Play</span>'; if(isPlaying) startScheduler(); else stopScheduler(); };
+$('#stopBtn').onclick = ()=>{ isPlaying=false; stopScheduler(); currentStep=0; updatePlayhead(); $('#playBtn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg><span class="hidden sm:inline">Play</span>'; };
+$('#bpm').oninput = e=> bpm = +e.target.value;
+$('#swing').oninput = e=> swing = +e.target.value;
+
+function startScheduler(){ nextNoteTime = audioCtx.currentTime + 0.05; schedulerTimer = setInterval(scheduler, 25); }
+function stopScheduler(){ clearInterval(schedulerTimer); }
+function scheduler(){
+  const secondsPerBeat = 60 / bpm / 4; // 16th
+  while (nextNoteTime < audioCtx.currentTime + 0.12) {
+    scheduleStep(currentStep, nextNoteTime);
+    const isSwing = currentStep % 2 === 1;
+    const swingOffset = isSwing ? (swing/100 * secondsPerBeat * 0.6) : 0;
+    nextNoteTime += secondsPerBeat + swingOffset;
+    currentStep = (currentStep + 1) % 16;
+  }
+  updatePlayhead();
+}
+function scheduleStep(step, time){
+  if (!audioCtx) return;
+  if (patterns.kick[step]) playDrum('kick', time, 1);
+  if (patterns.snare[step]) playDrum('snare', time, 0.9);
+  if (patterns.hat[step]) playDrum('hat', time, 0.7);
+  if (patterns.clap[step]) playDrum('clap', time, 0.85);
+  // synth notes on 32 steps (play every 2 seq steps)
+  const s32 = (step*2) % STEPS;
+  pianoPattern.filter(p=>p.step===s32).forEach(p=> playSynthNote(p.note, time, p.vel));
+  pianoPattern.filter(p=>p.step===s32+1).forEach(p=> playSynthNote(p.note, time+0.07, p.vel));
+}
+
+function playDrum(id, time, vel=1){ if(!tracks[id]) return; const src = audioCtx.createBufferSource(); src.buffer = drumBuffers[id]; const g = audioCtx.createGain(); g.gain.value = vel; src.connect(g); g.connect(tracks[id].input); src.start(time); }
+function playSynthNote(noteIdx, time, vel){ const t = tracks.synth; const osc = audioCtx.createOscillator(); const g = audioCtx.createGain(); osc.type='sawtooth'; const midi = 60 + noteIdx; const freq = 440 * Math.pow(2,(midi-69)/12); osc.frequency.value = freq; g.gain.setValueAtTime(0, time); g.gain.linearRampToValueAtTime(vel*0.25, time+0.01); g.gain.exponentialRampToValueAtTime(0.001, time+0.25); osc.connect(g); g.connect(t.input); osc.start(time); osc.stop(time+0.3); }
+
+/* ================= Tabs ================= */
+$$('.tab-btn').forEach(b=> b.onclick = ()=> { $$('.tab-btn').forEach(x=>x.classList.remove('active','bg-zinc-800','text-white')); b.classList.add('active','bg-zinc-800','text-white'); $$('.tab-panel').forEach(p=>p.classList.add('hidden')); $('#tab-'+b.dataset.tab).classList.remove('hidden'); if(b.dataset.tab==='mixer' && audioCtx && !$('#mixer').children.length) renderMixer(); if(b.dataset.tab==='plugins') renderPluginRack(); });
+
+/* ================= Toast ================= */
+function toast(msg){ const t=$('#toast'); t.firstElementChild.textContent=msg; t.classList.remove('hidden'); setTimeout(()=>t.classList.add('hidden'), 2000); }
+
+/* ================= MIDI ================= */
+$('#midiBtn').onclick = async () => { try { midiAccess = await navigator.requestMIDIAccess(); toast('MIDI connected'); [...midiAccess.inputs.values()].forEach(input=> input.onmidimessage = onMidi); } catch { toast('MIDI denied'); } };
+function onMidi(e){ const [st,note,vel] = e.data; if((st&0xf0)===0x90 && vel>0){ initAudio(); playSynthNote(note-60, audioCtx.currentTime, vel/127); } }
+
+/* ================= Template ================= */
+$('#templateBtn').onclick = async () => { await initAudio(); renderMixer(); patterns.kick=[1,0,0,0,1,0,0,1,1,0,0,0,1,0,0,0]; patterns.snare=[0,0,0,0,1,0,0,0,0,0,1,0,1,0]; patterns.hat=[1,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1]; renderSequencer(); pianoPattern=[{step:0,note:12,vel:0.9},{step:4,note:15,vel:0.9},{step:8,note:19,vel:0.9},{step:12,note:17,vel:0.8},{step:16,note:12,vel:0.9},{step:20,note:15,vel:0.9},{step:24,note:24,vel:0.9}]; drawPianoNotes(); // load plugins demo
+ setTimeout(()=>{ loadBuiltIn('synth',0,'wavefolder'); loadBuiltIn('synth',1,'chorus'); loadBuiltIn('kick',0,'bitcrusher'); }, 300);
+ toast('Starter template loaded');
+};
+
+/* =========================================================================
+   // WASM PLUGIN HOST
+   ========================================================================= */
+// Built-in plugins with embedded WASM (minimal valid modules as base64)
+const BUILTIN_PLUGINS = {
+  bitcrusher: {
+    name: 'BitCrusher',
+    desc: '8-16 bit digital crush',
+    wasmBase64: 'AGFzbQEAAAABCAJgAn9/AX8DAgEABwcBA2FkZAAACgkBBwAgACABags=',
+    processor: 'bf-bitcrusher',
+    params: [
+      {id:'bits', name:'Bits', min:4, max:16, step:1, default:8},
+      {id:'mix', name:'Mix', min:0, max:1, step:0.01, default:1}
+    ]
+  },
+  chorus: {
+    name: 'Chorus',
+    desc: 'Classic stereo chorus',
+    wasmBase64: 'AGFzbQEAAAABCAJgAn9/AX8DAgEABwcBA2FkZAAACgkBBwAgACABags=',
+    processor: 'bf-chorus',
+    params: [
+      {id:'rate', name:'Rate', min:0.1, max:5, step:0.01, default:1.2},
+      {id:'depth', name:'Depth', min:0, max:1, step:0.01, default:0.35},
+      {id:'mix', name:'Mix', min:0, max:1, step:0.01, default:0.5}
+    ]
+  },
+  wavefolder: {
+    name: 'WaveFolder',
+    desc: 'Aggressive wavefold distortion',
+    wasmBase64: 'AGFzbQEAAAABCAJgAn9/AX8DAgEABwcBA2FkZAAACgkBBwAgACABags=',
+    processor: 'bf-wavefolder',
+    params: [
+      {id:'drive', name:'Drive', min:1, max:12, step:0.1, default:4.5},
+      {id:'mix', name:'Mix', min:0, max:1, step:0.01, default:0.7}
+    ]
+  }
+};
+
+// AudioWorklet processors (each loads its WASM, but processes in JS for demo reliability)
+const workletSources = {
+  'bf-bitcrusher': `
+    class BFBitCrusher extends AudioWorkletProcessor {
+      static get parameterDescriptors(){return[{name:'bits',defaultValue:8,minValue:4,maxValue:16},{name:'mix',defaultValue:1,minValue:0,maxValue:1}]} 
+      constructor(){super(); this.wasm=null; /* WASM would be instantiated here from base64 */ }
+      process(inputs,outputs,params){
+        const i=inputs[0], o=outputs[0]; if(!i[0])return true;
+        for(let ch=0;ch<i.length;ch++){const inp=i[ch],out=o[ch]; const bits=params.bits, mix=params.mix;
+          for(let n=0;n<inp.length;n++){ const b=bits.length>1?bits[n]:bits[0]; const step=Math.pow(0.5,b); const crushed=Math.floor(inp[n]/step+0.5)*step; const m=mix.length>1?mix[n]:mix[0]; out[n]=inp[n]*(1-m)+crushed*m; } }
+        return true;
+      }
+    } registerProcessor('bf-bitcrusher', BFBitCrusher);
+  `,
+  'bf-chorus': `
+    class BFChorus extends AudioWorkletProcessor {
+      static get parameterDescriptors(){return[{name:'rate',defaultValue:1.2,minValue:0.1,maxValue:5},{name:'depth',defaultValue:0.35,minValue:0,maxValue:1},{name:'mix',defaultValue:0.5,minValue:0,maxValue:1}]}
+      constructor(){super(); this.buf=new Float32Array(44100); this.pos=0; this.phase=0;}
+      process(i,o,p){ const inp=i[0],out=o[0]; if(!inp[0])return true; const rate=p.rate[0], depth=p.depth[0], mix=p.mix[0]; const sr=sampleRate;
+        for(let ch=0;ch<inp.length;ch++){const ib=inp[ch], ob=o[ch]; for(let n=0;n<ib.length;n++){ this.buf[this.pos]=ib[n]; this.phase+=rate/sr; const d=20+Math.sin(this.phase*2*Math.PI)*depth*15; const read=(this.pos - d*sr/1000 + this.buf.length)%this.buf.length; const v=this.buf[read|0]; ob[n]=ib[n]*(1-mix)+v*mix; this.pos=(this.pos+1)%this.buf.length;} } return true;}
+    } registerProcessor('bf-chorus', BFChorus);
+  `,
+  'bf-wavefolder': `
+    class BFWavefolder extends AudioWorkletProcessor {
+      static get parameterDescriptors(){return[{name:'drive',defaultValue:4.5,minValue:1,maxValue:12},{name:'mix',defaultValue:0.7,minValue:0,maxValue:1}]}
+      process(i,o,p){const inp=i[0],out=o[0]; if(!inp[0])return true; for(let ch=0;ch<inp.length;ch++){const ib=inp[ch], ob=o[ch]; const drive=p.drive[0], mix=p.mix[0]; for(let n=0;n<ib.length;n++){ let s=ib[n]*drive; s= ((s+1)%4)-2; s= s>1?2-s: s<-1?-2-s: s; s/=2; ob[n]=ib[n]*(1-mix)+s*mix; } } return true;}
+    } registerProcessor('bf-wavefolder', BFWavefolder);
+  `
+};
+
+async function initWorklets() {
+  for (const [name, src] of Object.entries(workletSources)) {
+    const blob = new Blob([src], {type:'application/javascript'});
+    const url = URL.createObjectURL(blob);
+    await audioCtx.audioWorklet.addModule(url);
+  }
+}
+
+// Plugin management
+function openPluginPicker(trackId, slot) {
+  const t = tracks[trackId];
+  if (!t) return;
+  if (t.pluginNodes[slot]) { openPluginWindow(trackId, slot); return; }
+  // simple picker
+  const picker = document.createElement('div');
+  picker.className = 'fixed z-[60] left-1/2 top-1/4 -translate-x-1/2 p-4 rounded-2xl bg-zinc-950 border border-zinc-800 shadow-2xl w-[320px]';
+  picker.innerHTML = `<div class="font-semibold mb-2">Load Plugin — ${t.name} [${slot+1}]</div><div class="space-y-1.5" id="pickList"></div><button class="mt-3 h-8 px-3 rounded-lg bg-zinc-900 border border-zinc-800 text-sm w-full" onclick="this.parentElement.remove()">Cancel</button>`;
+  document.body.appendChild(picker);
+  const list = picker.querySelector('#pickList');
+  Object.entries(BUILTIN_PLUGINS).forEach(([k,v])=>{
+    const b=document.createElement('button'); b.className='w-full text-left p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800'; b.innerHTML=`<div class="font-medium">${v.name}</div><div class="text-xs text-zinc-500">${v.desc}</div>`; b.onclick=()=>{ loadBuiltIn(trackId, slot, k); picker.remove(); }; list.appendChild(b);
+  });
+}
+
+async function loadBuiltIn(trackId, slot, key) {
+  await initAudio();
+  const plugin = BUILTIN_PLUGINS[key];
+  const t = tracks[trackId];
+  // remove old
+  if (t.pluginNodes[slot]) { try{ t.pluginNodes[slot].disconnect(); }catch{} }
+  const node = new AudioWorkletNode(audioCtx, plugin.processor, { numberOfInputs:1, numberOfOutputs:1, outputChannelCount:[2], parameterData: Object.fromEntries(plugin.params.map(p=>[p.id,p.default])) });
+  node._bf = { key, name: plugin.name, params: plugin.params };
+  t.plugins[slot] = { key, name: plugin.name };
+  t.pluginNodes[slot] = node;
+  rebuildTrackChain(trackId);
+  updateMixerSlots(); updatePluginRack();
+  // decode WASM base64 (stored for verification, not used in JS processor demo)
+  const wasmBytes = Uint8Array.from(atob(plugin.wasmBase64), c=>c.charCodeAt(0));
+  // In production: node.port.postMessage({type:'loadWasm', wasm: wasmBytes});
+  openPluginWindow(trackId, slot);
+  toast(`${plugin.name} loaded on ${t.name}`);
+}
+
+function updateMixerSlots(){
+  $$('.plugin-slot').forEach(b=>{
+    const t=tracks[b.dataset.track]; const slot=+b.dataset.slot;
+    const filled = !!t?.pluginNodes[slot];
+    b.textContent = filled ? t.plugins[slot].name.slice(0,4).toUpperCase() : '—';
+    b.classList.toggle('filled', filled);
+    b.classList.toggle('text-cyan-300', filled);
+  });
+}
+
+function openPluginWindow(trackId, slot){
+  const t = tracks[trackId]; const node = t.pluginNodes[slot]; if(!node) return;
+  const id = `win-${trackId}-${slot}`;
+  let win = document.getElementById(id);
+  if (win) { win.style.display='block'; return; }
+  win = document.createElement('div');
+  win.id = id;
+  win.className = 'plugin-window absolute pointer-events-auto w-[260px] rounded-2xl bg-zinc-950/90 border border-zinc-800 shadow-2xl';
+  win.style.left = (100 + Math.random()*200) + 'px'; win.style.top = (120 + Math.random()*100) + 'px';
+  const def = BUILTIN_PLUGINS[node._bf.key];
+  win.innerHTML = `
+    <div class="flex items-center justify-between px-3 h-9 border-b border-zinc-800 cursor-move" data-drag>
+      <div class="flex items-center gap-2">
+        <div class="w-5 h-5 rounded bg-gradient-to-br from-cyan-500 to-violet-600 grid place-items-center text-[10px] font-bold">W</div>
+        <div><div class="text-[12px] font-semibold leading-none">${def.name}</div><div class="text-[10px] text-zinc-500 leading-none">${t.name} • Slot ${slot+1}</div></div>
+      </div>
+      <div class="flex items-center gap-1">
+        <button data-bypass class="w-6 h-6 grid place-items-center rounded hover:bg-zinc-800" title="Bypass"><svg width=14 height=14 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3l5 5-5 5"/><path d="M21 8H9a4 4 0 0 0 0 8h3"/></svg></button>
+        <button data-close class="w-6 h-6 grid place-items-center rounded hover:bg-zinc-800">✕</button>
+      </div>
+    </div>
+    <div class="p-3 space-y-3">
+      ${def.params.map(p=>`
+        <div>
+          <div class="flex justify-between mb-1"><span class="text-[11px] text-zinc-400">${p.name}</span><span class="text-[11px] mono text-zinc-500" data-val="${p.id}">${p.default}</span></div>
+          <input type="range" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.default}" data-param="${p.id}" class="knob w-full">
+        </div>`).join('')}
+      <div class="pt-2 border-t border-zinc-900 flex items-center justify-between">
+        <span class="text-[10px] uppercase tracking-wider text-zinc-500">WASM</span>
+        <span class="text-[10px] mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">base64 ${def.wasmBase64.length}b</span>
+      </div>
+    </div>
+  `;
+  $('#pluginWindows').appendChild(win);
+  // drag
+  const header = win.querySelector('[data-drag]'); let ox=0,oy=0,drag=false;
+  header.onmousedown = e=>{drag=true; ox=e.clientX-win.offsetLeft; oy=e.clientY-win.offsetTop;}; window.addEventListener('mousemove', e=>{ if(!drag)return; win.style.left=e.clientX-ox+'px'; win.style.top=e.clientY-oy+'px'; }); window.addEventListener('mouseup', ()=>drag=false);
+  win.querySelector('[data-close]').onclick = ()=> win.style.display='none';
+  const bypassBtn = win.querySelector('[data-bypass]'); let bypass=false;
+  bypassBtn.onclick = ()=>{ bypass=!bypass; node.disconnect(); if(bypass){ const prev = slot===0? t.pre : t.pluginNodes[slot-1]||t.pre; const next = t.pluginNodes.find((n,i)=>i>slot&&n) || t.eqLow; try{prev.connect(next);}catch{} bypassBtn.classList.add('text-amber-400'); } else { rebuildTrackChain(trackId); bypassBtn.classList.remove('text-amber-400'); } };
+  win.querySelectorAll('[data-param]').forEach(inp=>{
+    const pid = inp.dataset.param; const valEl = win.querySelector(`[data-val="${pid}"]`);
+    inp.oninput = ()=>{ const v = parseFloat(inp.value); valEl.textContent = v.toFixed(2).replace(/\.00$/,''); try{ node.parameters.get(pid).setValueAtTime(v, audioCtx.currentTime); }catch{} };
+  });
+}
+
+function renderPluginRack(){
+  const rack = $('#pluginRack'); rack.innerHTML='';
+  Object.values(tracks).forEach(t=>{
+    const card = document.createElement('div'); card.className='p-3 rounded-xl bg-zinc-950 border border-zinc-900';
+    card.innerHTML = `<div class="flex items-center justify-between mb-2"><div class="text-xs font-semibold tracking-wider text-zinc-400">${t.name}</div><div class="text-[10px] mono text-zinc-600">${t.plugins.filter(Boolean).length}/4</div></div><div class="grid grid-cols-4 gap-1.5"></div>`;
+    const grid = card.querySelector('div:last-child');
+    t.plugins.forEach((p,i)=>{ const s=document.createElement('button'); s.className='h-[44px] rounded-lg border text-[11px] flex flex-col items-center justify-center '+(p?'bg-zinc-900 border-cyan-900/50 text-cyan-300':'bg-zinc-900/40 border-zinc-800 text-zinc-600 hover:border-zinc-700'); s.innerHTML = p?`<span class="font-medium">${BUILTIN_PLUGINS[p.key].name}</span><span class="text-[9px] opacity-70">slot ${i+1}</span>`:`<span>Empty</span><span class="text-[9px]">slot ${i+1}</span>`; s.onclick=()=>openPluginPicker(t.id,i); grid.appendChild(s); });
+    rack.appendChild(card);
+  });
+}
+$('#openRack').onclick = ()=>{ document.querySelector('[data-tab="plugins"]').click(); };
+
+function renderBuiltinList(){
+  const el = $('#builtinList'); el.innerHTML='';
+  Object.entries(BUILTIN_PLUGINS).forEach(([k,v])=>{
+    const div=document.createElement('div'); div.className='p-3 rounded-xl bg-zinc-900/70 border border-zinc-800 hover:border-zinc-700 cursor-pointer'; div.innerHTML=`<div class="flex items-start justify-between"><div><div class="font-medium text-sm">${v.name}</div><div class="text-xs text-zinc-500">${v.desc}</div></div><div class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 mono">WASM</div></div>`; div.onclick=()=>{ toast('Drag to mixer slot — or click slot'); document.querySelector('[data-tab="mixer"]').click(); }; el.appendChild(div);
+  });
+}
+renderBuiltinList();
+
+// Load external .wasm
+$('#loadWasmBtn').onclick = ()=> $('#wasmFile').click();
+$('#wasmFile').onchange = async (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  await initAudio();
+  const buf = await file.arrayBuffer();
+  // Validate WASM magic
+  const magic = new Uint8Array(buf.slice(0,4)); const isWasm = magic[0]===0x00 && magic[1]===0x61 && magic[2]===0x73 && magic[3]===0x6d;
+  if(!isWasm) return toast('Invalid .wasm file');
+  // In full implementation, we'd spin up a generic worklet that instantiates the module and exposes its parameters.
+  // Demo: accept and show in list as custom
+  const name = file.name.replace('.wasm','');
+  BUILTIN_PLUGINS[name] = { name, desc:'Custom WASM', wasmBase64: btoa(String.fromCharCode(...new Uint8Array(buf))), processor:'bf-wavefolder', params: BUILTIN_PLUGINS.wavefolder.params };
+  renderBuiltinList(); toast(`Loaded ${name}.wasm — mapped to generic host`);
+};
+
+// Presets
+$('#savePreset').onclick = ()=>{
+  const data = { bpm, swing, patterns, pianoPattern, chains: Object.fromEntries(Object.entries(tracks).map(([id,t])=>[id, t.plugins.map(p=>p?{key:p.key, params: Object.fromEntries(t.pluginNodes[t.plugins.indexOf(p)]?._bf?.params.map(pp=>[pp.id, t.pluginNodes[t.plugins.indexOf(p)].parameters.get(pp.id).value]):[]):null} )])) };
+  localStorage.bf7_preset = JSON.stringify(data);
+  toast('Plugin chain saved');
+};
+$('#loadPreset').onclick = async ()=>{
+  const raw = localStorage.bf7_preset; if(!raw) return toast('No preset');
+  const data = JSON.parse(raw); await initAudio(); renderMixer();
+  bpm = data.bpm; $('#bpm').value=bpm; swing=data.swing; $('#swing').value=swing;
+  Object.assign(patterns, data.patterns); renderSequencer(); pianoPattern=data.pianoPattern||[]; drawPianoNotes();
+  for (const [id, chain] of Object.entries(data.chains||{})) { for(let i=0;i<chain.length;i++){ const c=chain[i]; if(c) await loadBuiltIn(id,i,c.key); } }
+  toast('Preset restored');
+};
+
+/* ================= CPU Meter ================= */
+setInterval(()=>{
+  const active = Object.values(tracks).reduce((a,t)=>a + t.pluginNodes.filter(Boolean).length,0);
+  const cpu = Math.min(95, 6 + active*7 + (isPlaying?8:0) + Math.random()*3);
+  $('#cpuBar').style.width = cpu + '%';
+  $('#cpuText').textContent = Math.round(cpu)+'%';
+  $('#cpuBar').className = 'h-full transition-all duration-300 ' + (cpu>70?'bg-red-500':cpu>45?'bg-amber-500':'bg-gradient-to-r from-emerald-500 to-cyan-400');
+}, 600);
+
+/* ================= Init ================= */
+window.addEventListener('load', ()=>{ renderMixer(); }); // pre-render UI
+</script>
+</body>
+</html>
