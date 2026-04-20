@@ -715,7 +715,7 @@ $('#wasmFile').onchange = async (e)=>{
 
 // Presets
 $('#savePreset').onclick = ()=>{
-  const data = { bpm, swing, patterns, pianoPattern, chains: Object.fromEntries(Object.entries(tracks).map(([id,t])=>[id, t.plugins.map(p=>p?{key:p.key, params: Object.fromEntries(t.pluginNodes[t.plugins.indexOf(p)]?._bf?.params.map(pp=>[pp.id, t.pluginNodes[t.plugins.indexOf(p)].parameters.get(pp.id).value]):[]):null} )])) };
+  const data = { bpm, swing, patterns, pianoPattern, chains: Object.fromEntries(Object.entries(tracks).map(([id,t])=>[id, t.plugins.map((p,i)=>p?{key:p.key, params: Object.fromEntries(t.pluginNodes[i]?._bf?.params.map(pp=>[pp.id, t.pluginNodes[i].parameters.get(pp.id).value]) || [])}:null)])) };
   localStorage.bf7_preset = JSON.stringify(data);
   toast('Plugin chain saved');
 };
