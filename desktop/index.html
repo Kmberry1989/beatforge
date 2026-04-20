@@ -81,13 +81,30 @@
       </div>
 
       <div class="flex items-center gap-2 ml-1">
+        <!-- Mode toggle -->
+        <div class="flex bg-zinc-900 rounded-lg p-0.5 border border-zinc-800 shadow-inner">
+          <button id="modeSeqBtn" class="px-2.5 py-1 text-[10px] font-bold rounded bg-zinc-700 text-white shadow">PATTERN</button>
+          <button id="modeSongBtn" class="px-2.5 py-1 text-[10px] font-bold rounded text-zinc-500 hover:text-white transition">SONG</button>
+        </div>
+        
+        <div class="hidden sm:flex items-center gap-1.5 bg-zinc-900/80 border border-zinc-800 rounded-lg h-8 px-2.5 z-10">
+          <span id="transPos" class="text-xs tracking-wider font-medium text-amber-400 mono w-[36px] text-center">1:1:1</span>
+        </div>
+        
+        <div class="hidden sm:flex items-center gap-1.5 bg-zinc-900/80 border border-zinc-800 rounded-lg h-8 px-2.5">
+          <span class="text-[11px] text-zinc-500 uppercase tracking-wide">Sig</span>
+          <select id="timeSig" class="bg-transparent outline-none text-xs font-mono text-zinc-200 cursor-pointer">
+            <option value="4">4/4</option><option value="3">3/4</option><option value="6">6/8</option>
+          </select>
+        </div>
+        
         <div class="hidden sm:flex items-center gap-1.5 bg-zinc-900/80 border border-zinc-800 rounded-lg h-8 px-2.5">
           <span class="text-[11px] text-zinc-500 uppercase tracking-wide">BPM</span>
-          <input id="bpm" type="number" value="140" min="60" max="200" class="w-[52px] bg-transparent outline-none text-sm font-medium mono text-zinc-100">
+          <input id="bpm" type="number" value="140" min="60" max="200" class="w-[42px] bg-transparent outline-none text-sm font-medium mono text-zinc-100">
         </div>
         <div class="hidden md:flex items-center gap-1.5 bg-zinc-900/80 border border-zinc-800 rounded-lg h-8 px-2.5">
           <span class="text-[11px] text-zinc-500 uppercase tracking-wide">Swing</span>
-          <input id="swing" type="range" min="0" max="40" value="8" class="w-20 accent-cyan-500">
+          <input id="swing" type="range" min="0" max="40" value="8" class="w-16 accent-cyan-500">
         </div>
       </div>
 
@@ -114,6 +131,7 @@
     <!-- Tabs -->
     <div class="flex items-center gap-1 px-2 sm:px-3 pb-2">
       <nav class="flex items-center gap-1 p-1 bg-zinc-950 rounded-xl border border-zinc-900">
+        <button data-tab="project" class="tab-btn px-3 h-7 rounded-lg text-[13px] font-medium text-emerald-400 hover:text-emerald-300">Project <span class="hidden sm:inline text-[9px] bg-emerald-900/40 text-emerald-400 px-1 rounded ml-1 border border-emerald-500/20 uppercase tracking-widest">Song</span></button>
         <button data-tab="seq" class="tab-btn active px-3 h-7 rounded-lg text-[13px] font-medium bg-zinc-800 text-white">Sequencer</button>
         <button data-tab="piano" class="tab-btn px-3 h-7 rounded-lg text-[13px] font-medium text-zinc-400 hover:text-zinc-200">Piano Roll</button>
         <button data-tab="mixer" class="tab-btn px-3 h-7 rounded-lg text-[13px] font-medium text-zinc-400 hover:text-zinc-200">Mixer</button>
@@ -137,7 +155,18 @@
     <section id="tab-seq" class="tab-panel absolute inset-0 overflow-auto">
       <div class="p-3 sm:p-4 max-w-[1280px] mx-auto">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <h2 class="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Drum Machine</h2>
+          <div class="flex items-center gap-3">
+            <h2 class="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Drum Machine</h2>
+            <div class="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded px-2 py-0.5 shadow-sm">
+              <span class="text-[10px] text-zinc-500 uppercase">Bars</span>
+              <select id="seqLength" class="bg-transparent text-xs outline-none text-zinc-200"><option value="1">1</option><option value="2">2</option><option value="4">4</option><option value="8">8</option></select>
+              <div class="w-px h-3 bg-zinc-700 mx-1"></div>
+              <button id="pagePrevBtn" class="text-zinc-400 hover:text-white px-1 font-mono">&lt;</button>
+              <span id="pageIndicator" class="text-[11px] mono text-amber-500 w-3 text-center">1</span>
+              <button id="pageNextBtn" class="text-zinc-400 hover:text-white px-1 font-mono">&gt;</button>
+            </div>
+            <button id="saveSeqClip" class="ml-2 h-6 px-2 text-[10px] uppercase font-bold tracking-wider rounded border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition">Save to Song</button>
+          </div>
           <div class="flex items-center gap-2">
             <select id="seqPreset" class="h-7 px-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs">
               <option>Trap</option><option>House</option><option>Boom Bap</option><option>Techno</option><option>Lo-Fi</option><option>Drum & Bass</option><option>Reggaeton</option><option>Synthwave</option><option>Electro</option>
@@ -156,6 +185,29 @@
       </div>
     </section>
 
+    <!-- PROJECT -->
+    <section id="tab-project" class="tab-panel absolute inset-0 overflow-auto hidden">
+      <div class="flex flex-col h-full bg-zinc-950">
+        <div class="h-10 border-b border-zinc-900 flex items-center px-4 justify-between bg-zinc-900/50">
+           <h2 class="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Song Arrangement</h2>
+           <div class="flex items-center gap-2">
+             <button id="clearProjectBtn" class="h-6 px-2.5 text-xs rounded border border-zinc-700 hover:bg-zinc-800">Clear Song</button>
+           </div>
+        </div>
+        <div class="flex-1 flex overflow-auto relative">
+          <div class="w-[120px] shrink-0 border-r border-zinc-900 bg-zinc-950 z-10 sticky left-0 space-y-1 py-4 px-2" id="projectTrackHeaders">
+             <!-- Dynamically added track headers here -->
+          </div>
+          <div class="flex-1 overflow-auto relative bg-zinc-950 grid-bg pb-12" id="projectTimeline" style="background-size: 80px 40px; background-position: 0 16px;">
+             <div id="projectPlayhead" class="absolute top-0 bottom-0 w-px bg-rose-500 pointer-events-none z-20" style="left:0; display:none;"></div>
+             <div id="projectClipsLayer" class="absolute inset-0 mt-4 h-full pointer-events-auto"></div>
+             <!-- Timeline Ruler -->
+             <div class="sticky top-0 h-4 border-b border-zinc-900/50 bg-zinc-950/80 z-10 flex text-[9px] text-zinc-600 mono" id="projectRuler"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- PIANO ROLL -->
     <section id="tab-piano" class="tab-panel absolute inset-0 overflow-hidden hidden">
       <div class="h-full flex flex-col">
@@ -169,6 +221,16 @@
               <option value="synth_pluck">SYNTH PLUCK</option>
               <option value="synth_lead">SYNTH LEAD</option>
             </select>
+            <div class="w-px h-4 bg-zinc-800 mx-2"></div>
+            <div class="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded px-2 py-0.5 shadow-sm">
+              <span class="text-[10px] text-zinc-500 uppercase">Bars</span>
+              <select id="pianoLength" class="bg-transparent text-xs outline-none text-zinc-200"><option value="1">1</option><option value="2">2</option><option value="4">4</option><option value="8">8</option></select>
+              <div class="w-px h-3 bg-zinc-700 mx-1"></div>
+              <button id="pianoPagePrev" class="text-zinc-400 hover:text-white px-1 font-mono">&lt;</button>
+              <span id="pianoPageInd" class="text-[11px] mono text-amber-500 w-3 text-center">1</span>
+              <button id="pianoPageNext" class="text-zinc-400 hover:text-white px-1 font-mono">&gt;</button>
+            </div>
+            <button id="savePianoClip" class="ml-2 h-6 px-2 text-[10px] uppercase font-bold tracking-wider rounded border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition">Save to Song</button>
           </div>
           <div class="flex items-center gap-2">
             <select id="scale" class="h-7 px-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs">
@@ -261,11 +323,17 @@ const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 
 let audioCtx, masterGain, isPlaying = false, bpm = 140, swing = 8;
-let currentStep = 0, nextNoteTime = 0, schedulerTimer = null;
+let playMode = 'pattern'; // pattern or song
+let timeSig = 4;
+let patternLengthBars = 1; // max 8
+let patternPage = 0; // 0, 16, 32, etc...
+let currentStep = 0, globalStep = 0, nextNoteTime = 0, schedulerTimer = null;
 let noiseBuf = null;
 let tracks = {};
-let pattern = Array(14).fill(0).map(()=>Array(16).fill(0.0));
+let pattern = Array(14).fill(0).map(()=>Array(128).fill(0.0)); // up to 128 steps (8 bars)
 let sounds = Array(14).fill(0);
+let projectClips = {}; // key: clipId, val: { type:'seq'|'piano', data: patternDataCopy }
+let arrangement = []; // array of { id: unique, clipId, trackId, startStep, length }
 let midiAccess = null;
 
 // Theme
@@ -427,21 +495,24 @@ const trackDefs = [
 function renderSequencer() {
   seqEl.innerHTML = '';
   stepsEl.innerHTML = '';
+  const offset = patternPage * 16;
   trackDefs.forEach((tr,ti) => {
     const row=document.createElement('div');row.className='track-row';row.style.color=tr.varCol;
     const label=document.createElement('div');label.className='track-label';
-    label.innerHTML=`<div class="track-name">${tr.name}</div><div class="sound-dots">${[0,1,2].map(i=>`<div class="sound-dot ${sounds[ti]===i?'sel':''}" data-t="${ti}" data-v="${i}" aria-label="sound ${i+1}"></div>`).join('')}</div>`;
+    label.innerHTML=`<div class="track-name">${tr.name}</div><div class="sound-dots">${[0,1,2].map(i=>`<div class="sound-dot ${sounds[ti]===i?'sel':''}" data-t="${ti}" data-v="${i}" aria-label="sound ${i+1}"></div>`).join('')}</div><button class="inline-plugin-btn" data-track="${tr.id}">FX</button>`;
     const pads=document.createElement('div');pads.className='pads';
     for(let s=0;s<16;s++){
+      const abs = s + offset;
       const p=document.createElement('div');
-      p.className='pad'+(pattern[ti][s]>0.01?' active':'');
-      p.style.setProperty('--vel', pattern[ti][s]);
-      p.dataset.t=ti;p.dataset.s=s;pads.appendChild(p);
+      p.className='pad'+(pattern[ti][abs]>0.01?' active':'');
+      p.style.setProperty('--vel', pattern[ti][abs]);
+      p.dataset.t=ti;p.dataset.s=abs;pads.appendChild(p);
     }
     row.appendChild(label);row.appendChild(pads);seqEl.appendChild(row);
   });
-  for(let i=0;i<16;i++){const d=document.createElement('div');d.className='step-dot';d.dataset.i=i;stepsEl.appendChild(d)}
+  for(let i=0;i<16;i++){const d=document.createElement('div');d.className='step-dot';d.dataset.i=i+offset;stepsEl.appendChild(d)}
   setupSequencerEvents();
+  $('#pageIndicator').innerText = patternPage + 1;
 }
 
 let dragTrack=-1, dragStep=-1, startY=0, startVel=0;
@@ -467,7 +538,19 @@ function setupSequencerEvents() {
     setPad(dragTrack, dragStep, newVel);
   };
   window.addEventListener('pointerup',()=> {dragTrack=-1;dragStep=-1;});
-  seqEl.onclick=e=>{const d=e.target.closest('.sound-dot');if(!d)return;const t=+d.dataset.t,v=+d.dataset.v;sounds[t]=v;d.parentElement.querySelectorAll('.sound-dot').forEach(x=>x.classList.toggle('sel',x===d));if(audioCtx)playSound(t,audioCtx.currentTime+0.001,v,0.8)};
+  seqEl.onclick=e=>{
+    const d=e.target.closest('.sound-dot');
+    if(d) {
+      const t=+d.dataset.t,v=+d.dataset.v;sounds[t]=v;
+      d.parentElement.querySelectorAll('.sound-dot').forEach(x=>x.classList.toggle('sel',x===d));
+      if(audioCtx)playSound(t,audioCtx.currentTime+0.001,v,0.8);
+      return;
+    }
+    const fxBtn=e.target.closest('.inline-plugin-btn');
+    if(fxBtn) {
+       openPluginPicker(fxBtn.dataset.track, 0); // open first slot
+    }
+  };
 }
 
 function setPad(t,s,v){
@@ -477,12 +560,33 @@ function setPad(t,s,v){
 }
 
 function updatePlayhead() {
-  document.querySelectorAll('.step-dot').forEach((d,i)=>d.classList.toggle('on',i===currentStep));
-  seqEl.querySelectorAll('.pad').forEach(p=>p.classList.toggle('step-on',+p.dataset.s===currentStep));
+  const activeStep = playMode === 'song' ? globalStep : currentStep;
+  document.querySelectorAll('.step-dot').forEach(d=>d.classList.toggle('on',+d.dataset.i===activeStep));
+  seqEl.querySelectorAll('.pad').forEach(p=>p.classList.toggle('step-on',+p.dataset.s===activeStep));
   const ph = $('#pianoPlayhead');
-  if (ph) { ph.style.display = isPlaying ? 'block':'none'; ph.style.left = ((currentStep%32)/32*1280) + 'px'; }
+  if (ph) {
+     const rel = activeStep - (patternPage*16);
+     if(rel>=0 && rel<32) {
+       ph.style.display = isPlaying?'block':'none';
+       ph.style.left = (rel*40) + 'px';
+     } else {
+       ph.style.display = 'none';
+     }
+  }
 }
 function flashPad(t,s){const el=document.querySelector(`.pad[data-t="${t}"][data-s="${s}"]`);if(el){el.classList.add('playing');setTimeout(()=>el.classList.remove('playing'),100)}}
+
+// Pagination UI Controls
+function changePage(delta) {
+  patternPage = Math.max(0, Math.min((patternLengthBars*16/16)-1, patternPage + delta));
+  renderSequencer(); renderPiano();
+}
+$('#pagePrevBtn').onclick = () => changePage(-1);
+$('#pageNextBtn').onclick = () => changePage(1);
+$('#pianoPagePrev').onclick = () => changePage(-1);
+$('#pianoPageNext').onclick = () => changePage(1);
+$('#seqLength').onchange = e => { patternLengthBars = +e.target.value; $('#pianoLength').value = e.target.value; };
+$('#pianoLength').onchange = e => { patternLengthBars = +e.target.value; $('#seqLength').value = e.target.value; };
 
 /* ================= Piano Roll ================= */
 const pianoKeys = $('#pianoKeys');
@@ -494,16 +598,20 @@ $('#pianoTrackSelect').onchange = e => { currentPianoTrack = e.target.value; dra
 
 function renderPiano() {
   pianoKeys.innerHTML=''; pianoGrid.innerHTML='';
+  const offset = patternPage * 16;
+  const PIANO_GRID_VISIBLE_STEPS = 32; // we show 2 bars at once historically, but let's stick to showing steps offset + 0..31
   for(let n=NOTES-1;n>=0;n--){
     const midi = 60 + n; const isBlack = [1,3,6,8,10].includes(midi%12);
     const key = document.createElement('div'); key.className = 'h-[20px] border-b border-zinc-900 flex items-center justify-end pr-1 ' + (isBlack?'piano-key black':'bg-zinc-900'); key.innerHTML = `<span class="text-[9px] mono ${isBlack?'text-zinc-600':'text-zinc-500'}">${['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][midi%12]}${Math.floor(midi/12)-1}</span>`; pianoKeys.appendChild(key);
-    for(let s=0;s<STEPS;s++){
-      const cell = document.createElement('div'); cell.className='absolute border border-zinc-900/70 hover:bg-white/5'; cell.style.left = s*40+'px'; cell.style.top = (NOTES-1-n)*20+'px'; cell.style.width='40px'; cell.style.height='20px'; cell.dataset.step=s; cell.dataset.note=n;
-      cell.onclick = () => toggleNote(s, n);
+    for(let s=0;s<PIANO_GRID_VISIBLE_STEPS;s++){
+      const abs = s + offset;
+      const cell = document.createElement('div'); cell.className='absolute border border-zinc-900/70 hover:bg-white/5'; cell.style.left = s*40+'px'; cell.style.top = (NOTES-1-n)*20+'px'; cell.style.width='40px'; cell.style.height='20px'; cell.dataset.step=abs; cell.dataset.note=n;
+      cell.onclick = () => toggleNote(abs, n);
       pianoGrid.appendChild(cell);
     }
   }
   drawPianoNotes();
+  $('#pianoPageInd').innerText = patternPage + 1;
 }
 function toggleNote(step, note){
   const idx = pianoPattern.findIndex(p=>p.step===step && p.note===note && p.track===currentPianoTrack);
@@ -514,9 +622,13 @@ function toggleNote(step, note){
 }
 function drawPianoNotes(){
   $$('#pianoGrid .piano-note').forEach(e=>e.remove());
+  const offset = patternPage * 16;
   pianoPattern.filter(p=>p.track===currentPianoTrack).forEach(p=>{
-    const el=document.createElement('div'); el.className='piano-note absolute rounded-[3px] bg-emerald-500/90 border border-emerald-300/30 shadow';
-    el.style.left=p.step*40+2+'px'; el.style.top=(NOTES-1-p.note)*20+2+'px'; el.style.width='36px'; el.style.height='16px'; pianoGrid.appendChild(el);
+    const relativeStep = p.step - offset;
+    if(relativeStep >= 0 && relativeStep < 32) {
+      const el=document.createElement('div'); el.className='piano-note absolute rounded-[3px] bg-emerald-500/90 border border-emerald-300/30 shadow';
+      el.style.left=relativeStep*40+2+'px'; el.style.top=(NOTES-1-p.note)*20+2+'px'; el.style.width='36px'; el.style.height='16px'; pianoGrid.appendChild(el);
+    }
   });
 }
 renderPiano();
@@ -578,24 +690,68 @@ $('#swing').oninput = e=> swing = +e.target.value;
 function startScheduler(){ nextNoteTime = audioCtx.currentTime + 0.05; schedulerTimer = setInterval(scheduler, 25); }
 function stopScheduler(){ clearInterval(schedulerTimer); }
 function scheduler(){
-  const secondsPerBeat = 60 / bpm / 4; // 16th
+  const secondsPer16th = 60 / bpm / 4;
   while (nextNoteTime < audioCtx.currentTime + 0.12) {
-    scheduleStep(currentStep, nextNoteTime);
-    const isSwing = currentStep % 2 === 1;
-    const swingOffset = isSwing ? (swing/100 * secondsPerBeat * 0.6) : 0;
-    nextNoteTime += secondsPerBeat + swingOffset;
-    currentStep = (currentStep + 1) % 16;
+    if(playMode === 'song') {
+       scheduleStep(globalStep, nextNoteTime, 'song');
+       const isSwing = globalStep % 2 === 1;
+       const swingOffset = isSwing ? (swing/100 * secondsPer16th * 0.6) : 0;
+       nextNoteTime += secondsPer16th + swingOffset;
+       globalStep++;
+    } else {
+       scheduleStep(currentStep, nextNoteTime, 'pattern');
+       const isSwing = currentStep % 2 === 1;
+       const swingOffset = isSwing ? (swing/100 * secondsPer16th * 0.6) : 0;
+       nextNoteTime += secondsPer16th + swingOffset;
+       currentStep++;
+       if(currentStep >= patternLengthBars * 16) currentStep = 0;
+       
+       if(currentStep % 16 === 0) {
+         const newPage = Math.floor(currentStep / 16);
+         if(patternPage !== newPage) {
+           patternPage = newPage;
+           // visually flip immediately
+           setTimeout(()=>{ renderSequencer(); renderPiano(); }, 5);
+         }
+       }
+    }
   }
   updatePlayhead();
+  
+  // Update Header Transport Pos
+  const s = playMode==='song' ? globalStep : currentStep;
+  const ts = parseInt($('#timeSig').value) || 4;
+  const bar = Math.floor(s / (ts * 4)) + 1;
+  const beat = Math.floor((s % (ts * 4)) / 4) + 1;
+  const si = (s % 4) + 1;
+  $('#transPos').innerText = `${bar}:${beat}:${si}`;
 }
-function scheduleStep(step, time){
+
+function scheduleStep(step, time, mode){
   if (!audioCtx) return;
-  for(let i=0;i<14;i++)if(pattern[i][step]>0.01){playSound(i,time,sounds[i],pattern[i][step]);flashPad(i,step)}
-  // synth notes on 32 steps (play every 2 seq steps)
-  const s32 = (step*2) % STEPS;
-  pianoPattern.filter(p=>p.step===s32).forEach(p=> playSynthNote(p.track, p.note, time, p.vel));
-  pianoPattern.filter(p=>p.step===s32+1).forEach(p=> playSynthNote(p.track, p.note, time+0.07, p.vel));
+  if(mode === 'pattern') {
+     for(let i=0;i<14;i++)if(pattern[i][step]>0.01){playSound(i,time,sounds[i],pattern[i][step]);flashPad(i,step)}
+     pianoPattern.filter(p=>p.step===step).forEach(p=> playSynthNote(p.track, p.note, time, p.vel));
+  } else {
+     arrangement.forEach(a => {
+        if(step >= a.startStep && step < a.startStep + a.length) {
+            const relStep = step - a.startStep;
+            const clip = projectClips[a.clipId];
+            if(!clip) return;
+            if(clip.type === 'seq') {
+               for(let i=0; i<14; i++) {
+                  if(clip.data[i][relStep] > 0.01) playSound(i,time,sounds[i],clip.data[i][relStep]);
+               }
+            } else if(clip.type === 'piano') {
+               clip.data.filter(p=>p.step===relStep).forEach(p=> playSynthNote(p.track, p.note, time, p.vel));
+            }
+        }
+     });
+  }
 }
+
+$('#modeSeqBtn').onclick = () => { playMode='pattern'; $('#modeSeqBtn').className='px-2.5 py-1 text-[10px] font-bold rounded bg-zinc-700 text-white shadow'; $('#modeSongBtn').className='px-2.5 py-1 text-[10px] font-bold rounded text-zinc-500 hover:text-white transition'; };
+$('#modeSongBtn').onclick = () => { playMode='song'; globalStep=0; $('#modeSongBtn').className='px-2.5 py-1 text-[10px] font-bold rounded bg-zinc-700 text-white shadow'; $('#modeSeqBtn').className='px-2.5 py-1 text-[10px] font-bold rounded text-zinc-500 hover:text-white transition'; };
 
 function playSynthNote(trackId, noteIdx, time, vel){
   if(!tracks[trackId]||!tracks[trackId].input) return;
@@ -944,6 +1100,80 @@ $('#loadPreset').onclick = async ()=>{
   for (const [id, chain] of Object.entries(data.chains||{})) { for(let i=0;i<chain.length;i++){ const c=chain[i]; if(c) await loadBuiltIn(id,i,c.key); } }
   toast('Preset restored');
 };
+
+/* ================== Project Arrangements ================== */
+let globalClipId = 1;
+$('#saveSeqClip').onclick = ()=>{
+  const id= 'seq-'+(globalClipId++);
+  projectClips[id] = { type:'seq', data: JSON.parse(JSON.stringify(pattern)), length: patternLengthBars*16, name: 'Drum Loop '+(globalClipId-1) };
+  toast('Saved to Song: '+projectClips[id].name);
+  if(!$('#tab-project').classList.contains('hidden')) renderProjectTimeline();
+};
+$('#savePianoClip').onclick = ()=>{
+  const id= 'piano-'+(globalClipId++);
+  projectClips[id] = { type:'piano', data: JSON.parse(JSON.stringify(pianoPattern)), length: patternLengthBars*16, track: currentPianoTrack, name: currentPianoTrack.replace('_',' ')+' '+(globalClipId-1) };
+  toast('Saved to Song: '+projectClips[id].name);
+  if(!$('#tab-project').classList.contains('hidden')) renderProjectTimeline();
+};
+
+const timelineEl = $('#projectTimeline');
+const clipLayer = $('#projectClipsLayer');
+
+function renderProjectTimeline(){
+  if(!$('#tab-project').classList.contains('hidden')) drawRulerAndPlayhead();
+  const headers = $('#projectTrackHeaders'); headers.innerHTML='';
+  ['Drums', ...Object.keys(tracks).filter(t=>t.startsWith('synth'))].forEach((n,i)=>{
+    const el = document.createElement('div'); el.className='h-12 border-b border-zinc-900 flex items-center px-2 text-zinc-400 text-[11px] font-medium leading-tight'; el.textContent = n.toUpperCase().replace('_',' ');
+    headers.appendChild(el);
+  });
+  
+  clipLayer.innerHTML='';
+  arrangement.forEach((a) => {
+    const c = projectClips[a.clipId]; if(!c) return;
+    const div = document.createElement('div');
+    const rowIdx = a.trackId === 'Drums' ? 0 : ['synth','synth_bass','synth_pad','synth_pluck','synth_lead'].indexOf(a.trackId) + 1;
+    div.className = `absolute h-[40px] rounded border shadow-lg flex items-center px-2 text-[10px] font-bold overflow-hidden cursor-pointer hover:opacity-80 transition ` + (c.type==='seq'?'bg-rose-900/60 border-rose-500 text-rose-200 mt-1':'bg-cyan-900/60 border-cyan-500 text-cyan-200 mt-1');
+    div.style.left = (a.startStep * 5) + 'px'; // 5px per step (80px per bar)
+    div.style.top = (rowIdx * 48) + 'px';
+    div.style.width = (c.length * 5) + 'px';
+    div.innerHTML = `<span>${c.name}</span><button class="ml-auto hover:text-white px-1 font-mono text-[9px]">✕</button>`;
+    div.onclick = ()=> { arrangement = arrangement.filter(x=>x.id!==a.id); renderProjectTimeline(); };
+    clipLayer.appendChild(div);
+  });
+  
+  let lib = $('#projectLibrary');
+  if(!lib){ lib=document.createElement('div'); lib.id='projectLibrary'; lib.className='absolute bottom-0 left-[120px] right-0 h-[64px] bg-zinc-900 border-t border-zinc-800 flex items-center px-4 gap-2 overflow-x-auto z-30'; $('#tab-project').appendChild(lib); }
+  lib.innerHTML='<div class="text-[10px] text-zinc-500 font-bold mr-2">LIBRARY: <span class="block font-normal lowercase tracking-widest text-zinc-600">click to add</span></div>';
+  Object.keys(projectClips).forEach(id => {
+     const c = projectClips[id];
+     const btn=document.createElement('button'); btn.className='shrink-0 h-8 px-3 rounded bg-zinc-800 text-[10px] font-medium border hover:-translate-y-0.5 transition '+ (c.type==='seq'?'border-rose-900 text-rose-400 hover:bg-rose-900/40':'border-cyan-900 text-cyan-400 hover:bg-cyan-900/40'); btn.textContent = c.name;
+     btn.onclick=()=>{
+        const trackId = c.type==='seq' ? 'Drums' : c.track;
+        arrangement.push({ id: Math.random(), clipId: id, trackId, startStep: globalStep, length: c.length });
+        renderProjectTimeline();
+     };
+     lib.appendChild(btn);
+  });
+}
+
+function drawRulerAndPlayhead() {
+  const ruler = $('#projectRuler'); ruler.innerHTML='';
+  const ts = parseInt($('#timeSig').value) || 4;
+  for(let b=0;b<200;b++) {
+     const t=document.createElement('div'); t.className='shrink-0 pl-1 border-l border-zinc-800 tracking-tighter'; t.style.width = (ts*4*5)+'px'; t.textContent=b+1;
+     ruler.appendChild(t);
+  }
+}
+
+setInterval(()=>{
+ if(playMode==='song') {
+   const ph = $('#projectPlayhead');
+   if(ph) { ph.style.display='block'; ph.style.left = (globalStep * 5) + 'px'; }
+ }
+}, 40);
+
+document.querySelector('[data-tab="project"]').addEventListener('click', ()=>{ renderProjectTimeline(); });
+$('#clearProjectBtn').onclick = ()=>{ arrangement=[]; renderProjectTimeline(); };
 
 /* ================= CPU Meter ================= */
 setInterval(()=>{
