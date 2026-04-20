@@ -1,29 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>BeatForge</title>
-<style>
-body { margin:0; background:#0a0a0f; color:#fff; font-family:system-ui; display:flex; align-items:center; justify-content:center; height:100vh; text-align:center }
-h1 { font-size:3rem; margin:0; background:linear-gradient(90deg,#00ffff,#ff00ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent }
-p { opacity:0.7 }
-</style>
-<script>
-(function() {
-  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
-  const target = isMobile ? '/mobile/' : '/desktop/';
-  // Preserve path for GitHub Pages subdirectory
-  const base = location.pathname.replace(/\/[^/]*$/, '/');
-  window.location.replace(base + target.replace(/^\//, ''));
-})();
-</script>
+<style>body{margin:0;background:#0a0a0f;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center}h1{font-size:3rem;background:linear-gradient(90deg,#0ff,#f0f);-webkit-background-clip:text;-webkit-text-fill-color:transparent}a{color:#0ff;margin:0 10px}</style>
 </head>
 <body>
-  <div>
-    <h1>BeatForge</h1>
-    <p>Redirecting...</p>
-    <p><a href="desktop/" style="color:#0ff">Desktop</a> | <a href="mobile/" style="color:#f0f">Mobile</a></p>
-  </div>
+<div><h1>BeatForge</h1><p id="m">Loading...</p><p><a href="desktop/">Desktop</a> | <a href="mobile/">Mobile</a></p></div>
+<script>
+const mobile = /Mobi|Android/i.test(navigator.userAgent) || innerWidth < 768;
+document.getElementById('m').textContent = 'Redirecting to ' + (mobile ? 'mobile' : 'desktop');
+location.replace(mobile ? 'mobile/' : 'desktop/');
+</script>
 </body>
 </html>
