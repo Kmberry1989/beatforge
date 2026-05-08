@@ -34,7 +34,7 @@
   }
   .track-row { display: flex; align-items: stretch; gap: 0; margin-bottom: 8px; }
   .track-label { position: sticky; left: 0; z-index: 5; width: 84px; flex: 0 0 84px; padding: 4px 8px 8px 0; background: linear-gradient(90deg, var(--seq-bg) 80%, transparent); display: flex; flex-direction: column; justify-content: center; }
-  .track-name { font-size: 11px; font-weight: 800; letter-spacing: .9px; color: var(--muted); margin-bottom: 6px; }
+  .track-name { font-size: 11px; font-weight: 800; letter-spacing: .9px; color: var(--muted); margin-bottom: 6px; transition: color 0.2s; }
   .sound-dots { display: flex; gap: 6px; }
   .sound-dot { width: 16px; height: 16px; border-radius: 5px; background: var(--pad); border: 2px solid transparent; transition: .15s; cursor: pointer; }
   .sound-dot.sel { border-color: currentColor; box-shadow: 0 0 8px currentColor; }
@@ -54,7 +54,6 @@
 </head>
 <body class="bg-[#050507] text-zinc-200 antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
 <div id="app" class="min-h-screen flex flex-col">
-  <!-- Header -->
   <header class="sticky top-0 z-40 border-b border-zinc-800/80 bg-black/70 backdrop-blur-xl">
     <div class="flex items-center gap-3 px-3 sm:px-4 h-[56px]">
       <div class="flex items-center gap-2.5">
@@ -69,7 +68,6 @@
 
       <div class="h-6 w-px bg-zinc-800 mx-1 hidden sm:block"></div>
 
-      <!-- Transport -->
       <div class="flex items-center gap-1.5">
         <button id="playBtn" class="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 font-medium text-sm flex items-center gap-1.5 shadow shadow-emerald-950/50 transition">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -81,7 +79,6 @@
       </div>
 
       <div class="flex items-center gap-2 ml-1">
-        <!-- Mode toggle -->
         <div class="flex bg-zinc-900 rounded-lg p-0.5 border border-zinc-800 shadow-inner">
           <button id="modeSeqBtn" class="px-2.5 py-1 text-[10px] font-bold rounded bg-zinc-700 text-white shadow">PATTERN</button>
           <button id="modeSongBtn" class="px-2.5 py-1 text-[10px] font-bold rounded text-zinc-500 hover:text-white transition">SONG</button>
@@ -110,7 +107,6 @@
 
       <div class="flex-1"></div>
 
-      <!-- CPU -->
       <div class="hidden sm:flex items-center gap-2">
         <span class="text-[10px] uppercase tracking-widest text-zinc-500">CPU</span>
         <div class="w-[84px] h-[6px] bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
@@ -128,7 +124,6 @@
       </button>
     </div>
 
-    <!-- Tabs -->
     <div class="flex items-center gap-1 px-2 sm:px-3 pb-2">
       <nav class="flex items-center gap-1 p-1 bg-zinc-950 rounded-xl border border-zinc-900">
         <button data-tab="project" class="tab-btn px-3 h-7 rounded-lg text-[13px] font-medium text-emerald-400 hover:text-emerald-300">Project <span class="hidden sm:inline text-[9px] bg-emerald-900/40 text-emerald-400 px-1 rounded ml-1 border border-emerald-500/20 uppercase tracking-widest">Song</span></button>
@@ -143,15 +138,14 @@
       <div class="flex-1"></div>
       <div class="flex items-center gap-1.5">
         <button id="templateBtn" class="h-7 px-2.5 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/20 text-xs font-medium transition">Load Starter</button>
+        <button id="exportAudioBtn" class="h-7 px-2.5 rounded-lg bg-emerald-900/50 hover:bg-emerald-800 border border-emerald-700/50 text-emerald-400 text-xs font-medium transition">Bounce Mix</button>
         <button id="savePreset" class="h-7 px-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs">Save Chain</button>
         <button id="loadPreset" class="h-7 px-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs">Load</button>
       </div>
     </div>
   </header>
 
-  <!-- Main -->
   <main class="flex-1 min-h-0 relative">
-    <!-- SEQUENCER -->
     <section id="tab-seq" class="tab-panel absolute inset-0 overflow-auto">
       <div class="p-3 sm:p-4 max-w-[1280px] mx-auto">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -180,12 +174,11 @@
         <div id="stepsIndicator" class="flex gap-[6px] pl-[84px] pr-[12px] mb-2"></div>
         <div id="sequencer" class="space-y-0 relative"></div>
         <div class="mt-6 p-3 rounded-xl bg-amber-950/20 border border-amber-900/30 text-amber-200/80 text-xs">
-          Tip: Click and drag on steps to quickly paint patterns. Select bottom dots to change sound variations.
+          Tip: Click and drag on steps to quickly paint patterns. Select bottom dots to change sound variations. Drop .wav files onto rows to load custom samples.
         </div>
       </div>
     </section>
 
-    <!-- PROJECT -->
     <section id="tab-project" class="tab-panel absolute inset-0 overflow-auto hidden">
       <div class="flex flex-col h-full bg-zinc-950">
         <div class="h-10 border-b border-zinc-900 flex items-center px-4 justify-between bg-zinc-900/50">
@@ -196,19 +189,16 @@
         </div>
         <div class="flex-1 flex overflow-auto relative">
           <div class="w-[120px] shrink-0 border-r border-zinc-900 bg-zinc-950 z-10 sticky left-0 space-y-1 py-4 px-2" id="projectTrackHeaders">
-             <!-- Dynamically added track headers here -->
-          </div>
+             </div>
           <div class="flex-1 overflow-auto relative bg-zinc-950 grid-bg pb-12" id="projectTimeline" style="background-size: 80px 40px; background-position: 0 16px;">
              <div id="projectPlayhead" class="absolute top-0 bottom-0 w-px bg-rose-500 pointer-events-none z-20" style="left:0; display:none;"></div>
              <div id="projectClipsLayer" class="absolute inset-0 mt-4 h-full pointer-events-auto"></div>
-             <!-- Timeline Ruler -->
              <div class="sticky top-0 h-4 border-b border-zinc-900/50 bg-zinc-950/80 z-10 flex text-[9px] text-zinc-600 mono" id="projectRuler"></div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- PIANO ROLL -->
     <section id="tab-piano" class="tab-panel absolute inset-0 overflow-hidden hidden">
       <div class="h-full flex flex-col">
         <div class="flex items-center justify-between px-4 h-11 border-b border-zinc-900 bg-zinc-950/50">
@@ -249,7 +239,6 @@
       </div>
     </section>
 
-    <!-- MIXER -->
     <section id="tab-mixer" class="tab-panel absolute inset-0 overflow-auto hidden">
       <div class="p-3 sm:p-4">
         <div class="flex items-center justify-between mb-3">
@@ -263,7 +252,6 @@
       </div>
     </section>
 
-    <!-- PLUGINS -->
     <section id="tab-plugins" class="tab-panel absolute inset-0 overflow-auto hidden">
       <div class="p-3 sm:p-6 max-w-[1100px] mx-auto">
         <div class="grid lg:grid-cols-3 gap-4">
@@ -309,10 +297,8 @@
   </main>
 </div>
 
-<!-- Plugin Window Template -->
 <div id="pluginWindows" class="fixed inset-0 pointer-events-none z-50"></div>
 
-<!-- Toast -->
 <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] hidden">
   <div class="px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 shadow-xl text-sm"></div>
 </div>
@@ -322,7 +308,7 @@
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 
-let audioCtx, masterGain, isPlaying = false, bpm = 140, swing = 8;
+let audioCtx, masterGain, masterCompressor, isPlaying = false, bpm = 140, swing = 8;
 let playMode = 'pattern'; // pattern or song
 let timeSig = 4;
 let patternLengthBars = 1; // max 8
@@ -332,6 +318,7 @@ let noiseBuf = null;
 let tracks = {};
 let pattern = Array(14).fill(0).map(()=>Array(128).fill(0.0)); // up to 128 steps (8 bars)
 let sounds = Array(14).fill(0);
+let customBuffers = {}; // NEW: Drag-and-Drop Custom Samples
 let projectClips = {}; // key: clipId, val: { type:'seq'|'piano', data: patternDataCopy }
 let arrangement = []; // array of { id: unique, clipId, trackId, startStep, length }
 let midiAccess = null;
@@ -351,9 +338,21 @@ themeToggle.onclick = () => setTheme(!document.documentElement.classList.contain
 async function initAudio() {
   if (audioCtx) return;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+  
   masterGain = audioCtx.createGain();
   masterGain.gain.value = 0.9;
-  masterGain.connect(audioCtx.destination);
+  
+  // NEW: Master Compressor / Limiter
+  masterCompressor = audioCtx.createDynamicsCompressor();
+  masterCompressor.threshold.value = -12; // Start ducking at -12dB
+  masterCompressor.knee.value = 30;       // Soft knee for smoother compression
+  masterCompressor.ratio.value = 4;       // 4:1 ratio
+  masterCompressor.attack.value = 0.005;  // Fast attack to catch peaks
+  masterCompressor.release.value = 0.1;   // Quick release
+  
+  // Connect Gain -> Compressor -> Destination
+  masterGain.connect(masterCompressor);
+  masterCompressor.connect(audioCtx.destination);
 
   // Worklet support check
   if (!audioCtx.audioWorklet) {
@@ -418,7 +417,7 @@ function rebuildTrackChain(id) {
   // disconnect
   try { t.pre.disconnect(); t.eqLow.disconnect(); t.eqMid.disconnect(); t.eqHigh.disconnect(); t.panner.disconnect(); t.gain.disconnect(); } catch {}
   t.pluginNodes.forEach(n => { try { n.disconnect(); } catch {} });
-  // chain: input -> plugins -> eqLow -> eqMid -> eqHigh -> panner -> gain -> master + sends
+  // chain: input -> plugins -> eqLow -> eqMid -> eqHigh -> panner -> gain -> masterGain + sends
   let last = t.pre;
   t.pluginNodes.forEach(node => {
     if (node) { last.connect(node); last = node; }
@@ -449,6 +448,21 @@ function playSound(tIdx, time, v, vel){
   if(!audioCtx || vel <= 0.01) return;
   const id=trackDefs[tIdx].id;
   const master=tracks[id].input;
+
+  // OVERRIDE: Check if a custom sample was loaded for this track
+  if (customBuffers[id]) {
+    const source = audioCtx.createBufferSource();
+    source.buffer = customBuffers[id];
+    
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(vel, time);
+    g.gain.exponentialRampToValueAtTime(0.001, time + source.buffer.duration);
+    
+    source.connect(g).connect(master);
+    source.start(time);
+    return; // Exit the function early so the hardcoded synth doesn't play
+  }
+
   switch(id){
    case 'kick':{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';const s=[168,130,200][v],e=[46,52,38][v],d=[0.36,0.26,0.17][v];o.frequency.setValueAtTime(s,time);o.frequency.exponentialRampToValueAtTime(e,time+0.11);g.gain.setValueAtTime(vel,time);g.gain.exponentialRampToValueAtTime(0.001,time+d);o.connect(g).connect(master);o.start(time);o.stop(time+d+0.02);break}
    case 'snare':{const n=audioCtx.createBufferSource();n.buffer=noiseBuf;const f=audioCtx.createBiquadFilter();f.type='highpass';f.frequency.value=[1200,1800,900][v];const g=audioCtx.createGain();g.gain.setValueAtTime(0.9*vel,time);g.gain.exponentialRampToValueAtTime(0.001,time+0.18);n.connect(f).connect(g).connect(master);n.start(time);n.stop(time+0.2);const o=audioCtx.createOscillator(),og=audioCtx.createGain();o.type='triangle';o.frequency.setValueAtTime([180,220,155][v],time);og.gain.setValueAtTime(0.28*vel,time);og.gain.exponentialRampToValueAtTime(0.001,time+0.08);o.connect(og).connect(master);o.start(time);o.stop(time+0.09);break}
@@ -499,7 +513,7 @@ function renderSequencer() {
   trackDefs.forEach((tr,ti) => {
     const row=document.createElement('div');row.className='track-row';row.style.color=tr.varCol;
     const label=document.createElement('div');label.className='track-label';
-    label.innerHTML=`<div class="track-name">${tr.name}</div><div class="sound-dots">${[0,1,2].map(i=>`<div class="sound-dot ${sounds[ti]===i?'sel':''}" data-t="${ti}" data-v="${i}" aria-label="sound ${i+1}"></div>`).join('')}</div><button class="inline-plugin-btn" data-track="${tr.id}">FX</button>`;
+    label.innerHTML=`<div class="track-name" ${customBuffers[tr.id] ? 'style="color: #10b981;"' : ''}>${tr.name}</div><div class="sound-dots">${[0,1,2].map(i=>`<div class="sound-dot ${sounds[ti]===i?'sel':''}" data-t="${ti}" data-v="${i}" aria-label="sound ${i+1}"></div>`).join('')}</div><button class="inline-plugin-btn" data-track="${tr.id}">FX</button>`;
     const pads=document.createElement('div');pads.className='pads';
     for(let s=0;s<16;s++){
       const abs = s + offset;
@@ -549,6 +563,46 @@ function setupSequencerEvents() {
     const fxBtn=e.target.closest('.inline-plugin-btn');
     if(fxBtn) {
        openPluginPicker(fxBtn.dataset.track, 0); // open first slot
+    }
+  };
+
+  // NEW: Drag and Drop sample loading
+  seqEl.ondragover = e => { 
+    e.preventDefault(); 
+    e.dataTransfer.dropEffect = 'copy'; 
+  };
+  
+  seqEl.ondrop = async e => {
+    e.preventDefault();
+    const row = e.target.closest('.track-row');
+    if (!row) return;
+    
+    const file = e.dataTransfer.files[0];
+    if (!file || !file.type.startsWith('audio/')) {
+      return toast('Please drop a valid audio file (.wav, .mp3, etc)');
+    }
+    
+    // Figure out which track we dropped it on based on the UI
+    const trackNameElement = row.querySelector('.track-name');
+    if (!trackNameElement) return;
+    
+    const trackDefIndex = trackDefs.findIndex(t => t.name === trackNameElement.innerText);
+    if (trackDefIndex === -1) return;
+    const trackId = trackDefs[trackDefIndex].id;
+    
+    await initAudio(); // Ensure audio context is alive to decode data
+    toast(`Loading ${file.name}...`);
+    
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      customBuffers[trackId] = audioBuffer;
+      toast(`${file.name} loaded to ${trackDefs[trackDefIndex].name}`);
+      
+      // Visual feedback: change track name text color to show it's custom
+      trackNameElement.style.color = '#10b981'; // emerald green
+    } catch (err) {
+      toast('Failed to decode audio file.');
     }
   };
 }
@@ -782,6 +836,50 @@ function playSynthNote(trackId, noteIdx, time, vel){
     osc1.connect(g); osc2.connect(g); g.connect(t.input); osc1.start(time); osc2.start(time); osc1.stop(time+0.45); osc2.stop(time+0.45);
   }
 }
+
+/* ================= Audio Export ================= */
+let mediaRecorder;
+let recordedChunks = [];
+
+$('#exportAudioBtn').onclick = async () => {
+  await initAudio();
+  
+  if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+    // Create a destination stream and connect the master compressor to it
+    const dest = audioCtx.createMediaStreamDestination();
+    masterCompressor.connect(dest);
+    
+    mediaRecorder = new MediaRecorder(dest.stream);
+    mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      // Package the recorded chunks into a downloadable file
+      const blob = new Blob(recordedChunks, { 'type' : 'audio/webm; codecs=opus' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; 
+      a.download = `BeatForge_Bounce_${Math.floor(Date.now()/1000)}.webm`; 
+      a.click();
+      recordedChunks = [];
+      toast('Export Complete!');
+    };
+    
+    mediaRecorder.start();
+    
+    // UI Updates
+    $('#exportAudioBtn').classList.add('bg-rose-600/50', 'border-rose-500', 'text-rose-200', 'animate-pulse');
+    $('#exportAudioBtn').innerText = 'Stop Recording';
+    toast('Recording mixdown...');
+    
+    // Auto-start playback
+    if (!isPlaying) $('#playBtn').click();
+  } else {
+    // Stop recording and trigger download
+    mediaRecorder.stop();
+    $('#exportAudioBtn').classList.remove('bg-rose-600/50', 'border-rose-500', 'text-rose-200', 'animate-pulse');
+    $('#exportAudioBtn').innerText = 'Bounce Mix';
+    if (isPlaying) $('#stopBtn').click();
+  }
+};
 
 /* ================= Tabs ================= */
 $$('.tab-btn').forEach(b=> b.onclick = ()=> { $$('.tab-btn').forEach(x=>x.classList.remove('active','bg-zinc-800','text-white')); b.classList.add('active','bg-zinc-800','text-white'); $$('.tab-panel').forEach(p=>p.classList.add('hidden')); $('#tab-'+b.dataset.tab).classList.remove('hidden'); if(b.dataset.tab==='mixer' && audioCtx && !$('#mixer').children.length) renderMixer(); if(b.dataset.tab==='plugins') renderPluginRack(); });
